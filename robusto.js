@@ -1,5 +1,5 @@
 /* Robustez: registro, errores visibles, diagnóstico, pantalla encendida, aviso al cerrar. Se carga antes que todo. */
-const VERSION="1.1 · 2026-11-06";
+const VERSION="1.3 · 2026-11-09";
 const LOG=[];
 function dbg(m){try{LOG.push(new Date().toLocaleTimeString()+"  "+String(m).slice(0,300));if(LOG.length>60)LOG.shift()}catch(e){}}
 function showErr(msg){try{let b=document.getElementById("errbar");if(!b){b=document.createElement("div");b.id="errbar";b.setAttribute("role","alert");document.body.appendChild(b)}
@@ -18,20 +18,20 @@ window.addEventListener("beforeunload",e=>{try{if(G&&G.A&&(G.A.phase==="run"||G.
 function diagRow(id,label){return `<div class="item row"><span class="grow">${esc(label)}</span><span id="${id}" class="small">…</span></div>`}
 function setD(id,ok,txt){const e=document.getElementById(id);if(e){e.textContent=(ok===null?"➖ ":ok?"✅ ":"❌ ")+txt}}
 function diagPage(){
- const checks=[["d1","Contexto seguro (https/localhost)"],["d2","Cifrado del código de sala (crypto.subtle)"],["d3","Videollamada (WebRTC)"],["d4","Cámara y micrófono"],["d5","Reconocimiento de voz (Chrome/Edge)"],["d6","Guardado local (localStorage)"],["d7","Servidor de encuentro (PeerJS)"],["d8","Pantalla siempre encendida"],["d9","Agente IA"]];
+ const checks=[["d1","Contexto seguro (https/localhost)"],["d2","Cifrado del código de sala (crypto.subtle)"],["d3","Videollamada (WebRTC)"],["d4","Cámara y micrófono"],["d5","Reconocimiento de voz (Chrome/Edge)"],["d6","Guardado local (localStorage)"],["d7","Servidor de encuentro (PeerJS)"],["d8","Pantalla siempre encendida"],["d10","Banco de estaciones cargado"]];
  $("#app").innerHTML=`<div class="card"><h3 style="margin-top:0">🩺 Diagnóstico</h3><div class="small mut">Versión ${esc(VERSION)} · ${esc(location.protocol+"//"+location.host)}</div>${checks.map(([i,l])=>diagRow(i,l)).join("")}
- <div class="row" style="margin-top:12px"><button class="g" onclick="diagAI()">Probar IA</button><button class="g" onclick="diagCopy()">Copiar registro</button><button class="g" onclick="diagWipe()">Borrar datos locales</button></div></div>
+ <div class="row" style="margin-top:12px"><button class="g" onclick="diagCopy()">Copiar registro</button><button class="g" onclick="diagWipe()">Borrar datos locales</button></div></div>
  <div class="card"><h3 style="margin-top:0">Registro reciente</h3><pre class="small" id="dlog">${esc(LOG.join("\n")||"(vacío)")}</pre></div>`;
  setD("d1",window.isSecureContext,window.isSecureContext?"sí":"no: abre la app desde https o localhost");
  setD("d2",!!(window.crypto&&crypto.subtle),(window.crypto&&crypto.subtle)?"disponible":"no disponible (código menos protegido)");
  setD("d3",!!window.RTCPeerConnection,window.RTCPeerConnection?"disponible":"este navegador no soporta WebRTC");
- setD("d5",!!(window.SpeechRecognition||window.webkitSpeechRecognition),(window.SpeechRecognition||window.webkitSpeechRecognition)?"disponible":"no disponible: la IA no tendrá transcripción");
+ setD("d5",!!(window.SpeechRecognition||window.webkitSpeechRecognition),(window.SpeechRecognition||window.webkitSpeechRecognition)?"disponible":"no disponible: no habrá transcripción (el buscador sí funciona)");
  setD("d8",!!navigator.wakeLock,navigator.wakeLock?"disponible":"no disponible (la pantalla puede apagarse)");
  try{localStorage.setItem("rvp2_t","1");localStorage.removeItem("rvp2_t");setD("d6",true,"funciona")}catch(e){setD("d6",false,"bloqueado: no se guardará el historial")}
  (async()=>{try{if(navigator.permissions){const c=await navigator.permissions.query({name:"camera"}),m=await navigator.permissions.query({name:"microphone"});setD("d4",c.state!=="denied"&&m.state!=="denied",`cámara ${c.state}, micrófono ${m.state}`)}else setD("d4",null,"no se puede consultar")}catch(e){setD("d4",null,"no se puede consultar")}})();
  (async()=>{const ac=new AbortController(),t=setTimeout(()=>ac.abort(),6000);try{await fetch("https://0.peerjs.com/",{mode:"no-cors",signal:ac.signal});setD("d7",true,"responde")}catch(e){setD("d7",false,"no responde (sin internet o bloqueado): no podrán crear sala")}finally{clearTimeout(t)}})();
- try{setD("d9",hasKey()?true:null,hasKey()?"configurada ("+cfg.provider+")":"sin key (opcional)")}catch(e){setD("d9",null,"no cargó agent.js")}}
-async function diagAI(){setD("d9",null,"probando…");try{const r=await llm({system:"Responde solo JSON.",user:'Devuelve {"ok":true}',schema:{type:"object",properties:{ok:{type:"boolean"}},required:["ok"],additionalProperties:false},final:false});setD("d9",!!r.data.ok,"conectada")}catch(e){setD("d9",false,errMsg(e))}}
+ try{const n=(window.ESTACOES||[]).length;setD("d10",n>0,n>0?n+" estaciones":"0: data.js no cargó; recarga sin caché (Ctrl+F5)")}catch(e){}
+ }
 function diagCopy(){const t="Versión "+VERSION+"\n"+navigator.userAgent+"\n"+LOG.join("\n");try{navigator.clipboard.writeText(t);alert("Registro copiado.")}catch(e){prompt("Copia el registro:",t)}}
 function diagWipe(){if(!confirm("¿Borrar historial, ajustes y llaves guardadas en este navegador? No se puede deshacer."))return;try{Object.keys(localStorage).filter(k=>k.startsWith("rvp2")).forEach(k=>localStorage.removeItem(k));Object.keys(sessionStorage).filter(k=>k.startsWith("rvp2")).forEach(k=>sessionStorage.removeItem(k))}catch(e){}location.reload()}
 
